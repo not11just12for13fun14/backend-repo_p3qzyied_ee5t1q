@@ -1,8 +1,10 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr
+from typing import Optional
 
-app = FastAPI()
+app = FastAPI(title="Papat Pitu Studio API", description="Backend for Papat Pitu Studio company profile website")
 
 app.add_middleware(
     CORSMiddleware,
@@ -12,9 +14,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class InquiryRequest(BaseModel):
+    name: str
+    email: EmailStr
+    company: Optional[str] = None
+    service: Optional[str] = None
+    message: str
+    budget: Optional[str] = None
+    source: Optional[str] = None
+
 @app.get("/")
 def read_root():
-    return {"message": "Hello from FastAPI Backend!"}
+    return {"message": "Papat Pitu Studio API is running"}
 
 @app.get("/api/hello")
 def hello():
@@ -64,6 +75,18 @@ def test_database():
     
     return response
 
+@app.post("/api/inquiries")
+def create_inquiry(payload: InquiryRequest):
+    """Store client inquiry to MongoDB"""
+    try:
+        from database import create_document
+        from schemas import Inquiry
+        data = payload.dict()
+        create_document("inquiry", Inquiry(**data).model_dump())
+        return {"status": "ok", "message": "Thank you! We will get back to you shortly."}
+    except Exception as e:
+        # Still return success-like response to avoid exposing internals on marketing site
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
